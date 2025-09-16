@@ -8,15 +8,15 @@ authors = ["yaobos@outlook.com"]
 repository = "https://github.com/yaobo-lab/utils-rs"
 
 [dependencies]
-serde = { version = "1.0.203", features = ["derive"] }
-anyhow = "1.0.98"
-chrono = { version = "0.4.41" }
+serde = { version = "1.0.225", features = ["derive"] }
+anyhow = "1.0.99"
+chrono = { version = "0.4.42" }
 
-log = { version = "0.4.26", default-features = false, features = [
+log = { version = "0.4.28", default-features = false, features = [
     "std",
 ], optional = true }
 ftlog = { version = "0.2.15", optional = true }
-time = { version = "0.3.41", features = [
+time = { version = "0.3.43", features = [
     "local-offset",
     "formatting",
 ], optional = true }

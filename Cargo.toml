@@ -16,7 +16,7 @@ log = { version = "0.4.28", default-features = false, features = [
     "std",
 ], optional = true }
 ftlog = { version = "0.2.15", optional = true }
-time = { version = "0.3.43", features = [
+time = { version = "0.3.44", features = [
     "local-offset",
     "formatting",
 ], optional = true }

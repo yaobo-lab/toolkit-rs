@@ -13,15 +13,20 @@ static LOG_STYLE: AtomicU8 = AtomicU8::new(0);
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct LogConfig {
     //等级
+    #[serde(default = "default_level")]
     pub level: u8,
     //大小
+    #[serde(default = "default_usize")]
     pub size: usize,
     //是否打印到控制台
+    #[serde(default = "default_console")]
     pub console: bool,
     // 日志输出文件
+    #[serde(default = "default_log_file")]
     pub file: String,
     // 日志保留文件数
-    pub key_num: i64,
+    #[serde(default = "default_keep_day")]
+    pub keep_day: i64,
     // bounded
     pub bounded: Option<usize>,
     // 过滤日志模块
@@ -30,17 +35,32 @@ pub struct LogConfig {
     pub style: Option<String>,
 }
 
+fn default_usize() -> usize {
+    3 * 1024 * 1024
+}
+fn default_console() -> bool {
+    true
+}
+fn default_keep_day() -> i64 {
+    3
+}
+fn default_level() -> u8 {
+    4
+}
+fn default_log_file() -> String {
+    "./logs/app.log".to_string()
+}
 impl Default for LogConfig {
     fn default() -> Self {
         Self {
-            level: 4,
-            size: 3 * 1024 * 1024,
-            console: true,
-            file: "./logs/app.log".to_string(),
-            key_num: 3,
+            level: default_level(),
+            size: default_usize(),
+            console: default_console(),
+            file: default_log_file(),
+            keep_day: default_keep_day(),
             filters: None,
             bounded: Some(1_000),
-            style: Some("line".to_string()),
+            style: Some("".to_string()),
         }
     }
 }
@@ -97,13 +117,16 @@ impl Display for Msg {
                     self.args
                 )),
                 //none
-                _ => f.write_str(&format!(
-                    "{}:{} [{}] {}",
-                    self.file.unwrap_or(""),
-                    self.line.unwrap_or(0),
-                    self.level,
-                    self.args
-                )),
+                _ => match self.level {
+                    Level::Error | Level::Warn => f.write_str(&format!(
+                        "{}:{} [{}] {}",
+                        self.file.unwrap_or(""),
+                        self.line.unwrap_or(0),
+                        self.level,
+                        self.args
+                    )),
+                    _ => f.write_str(&format!("[{}] {}", self.level, self.args)),
+                },
             }
         }
     }
@@ -176,7 +199,7 @@ pub fn setup(cfg: LogConfig) -> Result<()> {
     let log_cfg = FileAppender::builder()
         .path(cfg.file.as_str())
         .rotate(Period::Day)
-        .expire(Duration::days(cfg.key_num))
+        .expire(Duration::days(cfg.keep_day))
         .build();
 
     // 打印到不同的渠道

@@ -1,14 +1,18 @@
-use anyhow::{anyhow, Result};
-use ftlog::appender::{file::Period, ChainAppenders, FileAppender};
-use ftlog::FtLogFormat;
-use log::{Level, LevelFilter, Record};
+use anyhow::Result;
+use flexi_logger::{
+    Age, Cleanup, Criterion, DeferredNow, Duplicate, FileSpec, LogSpecification, Logger, Naming,
+    Record,
+};
+use log::LevelFilter;
 use serde::{Deserialize, Serialize};
-use std::fmt::Display;
-use std::path::Path;
-use std::sync::atomic::{AtomicU8, Ordering};
-use time::Duration;
-
-static LOG_STYLE: AtomicU8 = AtomicU8::new(0);
+const TIME_FORMAT: &str = "%Y.%m.%d %H:%M:%S%.3f";
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum LogStyle {
+    Default,
+    Line,
+    Module,
+    Full,
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct LogConfig {
@@ -17,132 +21,48 @@ pub struct LogConfig {
     pub level: u8,
     //大小
     #[serde(default = "default_usize")]
-    pub size: usize,
+    pub size: u64,
     //是否打印到控制台
     #[serde(default = "default_console")]
     pub console: bool,
-    // 日志输出文件
-    #[serde(default = "default_log_file")]
-    pub file: String,
+    // 日志输出目录
+    #[serde(default = "default_log_dir")]
+    pub dir: String,
     // 日志保留文件数
     #[serde(default = "default_keep_day")]
-    pub keep_day: i64,
-    // bounded
-    pub bounded: Option<usize>,
+    pub keep_day: usize,
     // 过滤日志模块
     pub filters: Option<Vec<String>>,
-    // simple,line,module,full
-    pub style: Option<String>,
+    pub style: LogStyle,
 }
 
-fn default_usize() -> usize {
-    3 * 1024 * 1024
+fn default_usize() -> u64 {
+    3
 }
 fn default_console() -> bool {
     true
 }
-fn default_keep_day() -> i64 {
+fn default_keep_day() -> usize {
     3
 }
 fn default_level() -> u8 {
     4
 }
-fn default_log_file() -> String {
-    "./logs/app.log".to_string()
+fn default_log_dir() -> String {
+    "./logs".to_string()
 }
+
 impl Default for LogConfig {
     fn default() -> Self {
         Self {
             level: default_level(),
             size: default_usize(),
             console: default_console(),
-            file: default_log_file(),
+            dir: default_log_dir(),
             keep_day: default_keep_day(),
             filters: None,
-            bounded: Some(1_000),
-            style: Some("".to_string()),
+            style: LogStyle::Default,
         }
-    }
-}
-
-#[allow(dead_code)]
-struct Msg {
-    level: Level,
-    thread: Option<String>,
-    file: Option<&'static str>,
-    line: Option<u32>,
-    args: String,
-    module_path: Option<&'static str>,
-}
-
-impl Display for Msg {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        //所有出错都打印 行号，文件路径
-        if self.level == Level::Warn || self.level == Level::Error {
-            f.write_str(&format!(
-                "{}:{} [{}] {}",
-                self.file.unwrap_or(""),
-                self.line.unwrap_or(0),
-                self.level,
-                self.args
-            ))
-        } else {
-            let s = LOG_STYLE.load(Ordering::Relaxed);
-            match s {
-                //line
-                1 => f.write_str(&format!(
-                    "{}:{} [{}] {}",
-                    self.file.unwrap_or(""),
-                    self.line.unwrap_or(0),
-                    self.level,
-                    self.args
-                )),
-                //module
-                2 => f.write_str(&format!(
-                    "{} {}:{} [{}] {}",
-                    self.module_path.unwrap_or(""),
-                    self.file.unwrap_or(""),
-                    self.line.unwrap_or(0),
-                    self.level,
-                    self.args
-                )),
-                //full
-                3 => f.write_str(&format!(
-                    "{}:{}||{}:{} [{}] {}",
-                    self.thread.as_ref().map(|x| x.as_str()).unwrap_or(""),
-                    self.module_path.unwrap_or(""),
-                    self.file.unwrap_or(""),
-                    self.line.unwrap_or(0),
-                    self.level,
-                    self.args
-                )),
-                //none
-                _ => match self.level {
-                    Level::Error | Level::Warn => f.write_str(&format!(
-                        "{}:{} [{}] {}",
-                        self.file.unwrap_or(""),
-                        self.line.unwrap_or(0),
-                        self.level,
-                        self.args
-                    )),
-                    _ => f.write_str(&format!("[{}] {}", self.level, self.args)),
-                },
-            }
-        }
-    }
-}
-struct MyFormatter;
-
-impl FtLogFormat for MyFormatter {
-    fn msg(&self, record: &Record) -> Box<dyn Send + Sync + std::fmt::Display> {
-        Box::new(Msg {
-            level: record.level(),
-            thread: std::thread::current().name().map(|n| n.to_string()),
-            file: record.file_static(),
-            line: record.line(),
-            args: format!("{}", record.args()),
-            module_path: record.module_path_static(),
-        })
     }
 }
 
@@ -158,6 +78,73 @@ pub fn string_to_level(level: &str) -> u8 {
     v
 }
 
+pub fn _default(
+    w: &mut dyn std::io::Write,
+    now: &mut DeferredNow,
+    record: &Record,
+) -> Result<(), std::io::Error> {
+    if record.level() == LevelFilter::Error || record.level() == LevelFilter::Warn {
+        write!(
+            w,
+            "{} [{}] {}:{}: ",
+            now.format(TIME_FORMAT),
+            record.level(),
+            record.file().unwrap_or("<unnamed>"),
+            record.line().unwrap_or(0),
+        )?;
+    } else {
+        write!(w, "{} [{}]: ", now.format(TIME_FORMAT), record.level(),)?;
+    }
+    write!(w, "{}", &record.args())
+}
+
+pub fn _line(
+    w: &mut dyn std::io::Write,
+    now: &mut DeferredNow,
+    record: &Record,
+) -> Result<(), std::io::Error> {
+    write!(
+        w,
+        "{} [{}] {}:{}: ",
+        now.format(TIME_FORMAT),
+        record.level(),
+        record.file().unwrap_or("<unnamed>"),
+        record.line().unwrap_or(0),
+    )?;
+    write!(w, "{}", &record.args())
+}
+
+pub fn _module(
+    w: &mut dyn std::io::Write,
+    now: &mut DeferredNow,
+    record: &Record,
+) -> Result<(), std::io::Error> {
+    write!(
+        w,
+        "{} [{}] [{}]: ",
+        now.format(TIME_FORMAT),
+        record.level(),
+        record.module_path().unwrap_or("<unnamed>"),
+    )?;
+    write!(w, "{}", &record.args())
+}
+
+pub fn _full(
+    w: &mut dyn std::io::Write,
+    now: &mut DeferredNow,
+    record: &Record,
+) -> Result<(), std::io::Error> {
+    write!(
+        w,
+        "{} [{}] [{}] {}:{}: ",
+        now.format(TIME_FORMAT),
+        record.level(),
+        record.module_path().unwrap_or("<unnamed>"),
+        record.file().unwrap_or("<unnamed>"),
+        record.line().unwrap_or(0),
+    )?;
+    write!(w, "{}", &record.args())
+}
 pub fn setup(cfg: LogConfig) -> Result<()> {
     let level = match cfg.level {
         1 => LevelFilter::Error,
@@ -168,79 +155,46 @@ pub fn setup(cfg: LogConfig) -> Result<()> {
         _ => LevelFilter::Debug,
     };
 
-    //日志风格
-    let s: &str = &cfg.style.unwrap_or_default();
-    let style: u8 = match s {
-        "line" => 1,
-        "module" => 2,
-        "full" => 3,
-        _ => 0,
-    };
-    LOG_STYLE.store(style, Ordering::Relaxed);
-
-    let time_format = time::format_description::parse_owned::<1>(
-        "[year].[month].[day] [hour]:[minute]:[second].[subsecond digits:2]",
-    )
-    .unwrap();
-
-    let mut dir_str = "".to_string();
-    let dir = Path::new(cfg.file.as_str());
-    if let Some(p) = dir.parent() {
-        dir_str = format!("{}", p.display());
-        std::fs::create_dir_all(p)?;
-    }
-
-    let filter_log = if !dir_str.is_empty() {
-        format!("{}/filters.log", dir_str)
-    } else {
-        format!("./filters.log")
-    };
-
-    let log_cfg = FileAppender::builder()
-        .path(cfg.file.as_str())
-        .rotate(Period::Day)
-        .expire(Duration::days(cfg.keep_day))
-        .build();
-
-    // 打印到不同的渠道
-    let chains = if cfg.console {
-        ChainAppenders::new(vec![Box::new(log_cfg), Box::new(std::io::stdout())])
-    } else {
-        ChainAppenders::new(vec![Box::new(log_cfg)])
-    };
-
-    let mut b = ftlog::Builder::new().format(MyFormatter);
-    if let Some(v) = cfg.bounded {
-        b = b.bounded(v, false);
-    } else {
-        b = b.unbounded();
-    }
-
-    let mut b = b
-        .time_format(time_format)
-        .max_log_level(level)
-        .root(chains)
-        .appender("ftlog-appender", FileAppender::new(filter_log));
-
-    if let Some(items) = cfg.filters {
-        for module in items {
-            let static_module: &'static str = Box::leak(module.into_boxed_str());
-            b = b.filter(static_module, "ftlog-appender", LevelFilter::Warn);
+    let mut log_spec = LogSpecification::builder();
+    log_spec.default(level);
+    if let Some(items) = &cfg.filters {
+        for m in items {
+            log_spec.module(m, LevelFilter::Warn);
         }
     }
 
-    //
-    // b = b.filter("ureq", "ftlog-appender", LevelFilter::Warn);
-    // b = b.filter("ureq_proto::client", "ftlog-appender", LevelFilter::Warn);
-    // b = b.filter("ureq::unversioned", "ftlog-appender", LevelFilter::Warn);
+    let hand = Logger::with(log_spec.build());
 
-    // ftlog::appender: 需要过滤的模块路径（ftlog::appender）
-    // 指定使用的日志输出器名称（ftlog-appender）
-    // 指定日志级别
-    // .filter("app::startup", "ftlog-startup", LevelFilter::Warn)
-    // .appender("ftlog-startup", FileAppender::new("./logs/startup.log"))
-    b.try_init()
-        .map_err(|e| anyhow!("logger init failed:{}", e.to_string()))?;
+    //日志风格
+    let hand = match cfg.style {
+        LogStyle::Line => hand.format(_line),
+        LogStyle::Module => hand.format(_module),
+        LogStyle::Full => hand.format(_full),
+        LogStyle::Default => hand.format(_default),
+    };
 
+    let mut hand = hand
+        .rotate(
+            Criterion::AgeOrSize(Age::Day, cfg.size * 1024 * 1024),
+            Naming::TimestampsCustomFormat {
+                current_infix: None,
+                format: "%Y.%m.%d",
+            },
+            Cleanup::KeepForDays(cfg.keep_day),
+        )
+        .log_to_file(FileSpec::default().directory(cfg.dir).basename(""));
+
+    if cfg.console {
+        let d = match cfg.level {
+            1 => Duplicate::Error,
+            2 => Duplicate::Warn,
+            3 => Duplicate::Info,
+            4 => Duplicate::Debug,
+            5 => Duplicate::Trace,
+            _ => Duplicate::Debug,
+        };
+        hand = hand.duplicate_to_stdout(d)
+    }
+    hand.start()?;
     Ok(())
 }

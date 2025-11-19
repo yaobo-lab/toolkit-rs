@@ -19,9 +19,9 @@ pub struct LogConfig {
     //等级
     #[serde(default = "default_level")]
     pub level: u8,
-    //大小
+    //大小 MB
     #[serde(default = "default_usize")]
-    pub size: u64,
+    pub size_mb: u64,
     //是否打印到控制台
     #[serde(default = "default_console")]
     pub console: bool,
@@ -56,7 +56,7 @@ impl Default for LogConfig {
     fn default() -> Self {
         Self {
             level: default_level(),
-            size: default_usize(),
+            size_mb: default_usize(),
             console: default_console(),
             dir: default_log_dir(),
             keep_day: default_keep_day(),
@@ -175,7 +175,7 @@ pub fn setup(cfg: LogConfig) -> Result<()> {
 
     let mut hand = hand
         .rotate(
-            Criterion::AgeOrSize(Age::Day, cfg.size * 1024 * 1024),
+            Criterion::AgeOrSize(Age::Day, cfg.size_mb * 1024 * 1024),
             Naming::TimestampsCustomFormat {
                 current_infix: None,
                 format: "%Y.%m.%d",

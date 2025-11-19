@@ -170,7 +170,7 @@ pub fn setup(cfg: LogConfig) -> Result<()> {
         LogStyle::Line => hand.format(_line),
         LogStyle::Module => hand.format(_module),
         LogStyle::Full => hand.format(_full),
-        LogStyle::Default => hand.format(_default),
+        _ => hand.format(_default),
     };
 
     let mut hand = hand

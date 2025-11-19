@@ -33,6 +33,9 @@ pub struct LogConfig {
     pub keep_day: usize,
     // 过滤日志模块
     pub filters: Option<Vec<String>>,
+    // 日志文件名
+    pub log_name: Option<String>,
+    // 日志风格
     pub style: LogStyle,
 }
 
@@ -61,6 +64,7 @@ impl Default for LogConfig {
             dir: default_log_dir(),
             keep_day: default_keep_day(),
             filters: None,
+            log_name: None,
             style: LogStyle::Default,
         }
     }
@@ -173,6 +177,12 @@ pub fn setup(cfg: LogConfig) -> Result<()> {
         _ => hand.format(_default),
     };
 
+    let basename = match &cfg.log_name {
+        Some(name) => name,
+        None => "",
+    };
+    let filespec = FileSpec::default().directory(cfg.dir).basename(basename);
+
     let mut hand = hand
         .rotate(
             Criterion::AgeOrSize(Age::Day, cfg.size_mb * 1024 * 1024),
@@ -182,7 +192,7 @@ pub fn setup(cfg: LogConfig) -> Result<()> {
             },
             Cleanup::KeepForDays(cfg.keep_day),
         )
-        .log_to_file(FileSpec::default().directory(cfg.dir).basename(""));
+        .log_to_file(filespec);
 
     if cfg.console {
         let d = match cfg.level {

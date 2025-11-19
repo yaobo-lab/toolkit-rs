@@ -1,6 +1,6 @@
 [package]
 name = "toolkit-rs"
-version = "1.0.17"
+version = "1.0.18"
 edition = "2021"
 description = "Rust toolkit library(logger, time, painc handle)"
 license = "MIT"   

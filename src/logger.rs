@@ -192,6 +192,7 @@ pub fn setup(cfg: LogConfig) -> Result<()> {
             },
             Cleanup::KeepForDays(cfg.keep_day),
         )
+        .cleanup_in_background_thread(true)
         .log_to_file(filespec);
 
     if cfg.console {

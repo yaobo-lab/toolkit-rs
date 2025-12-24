@@ -37,6 +37,8 @@ pub struct LogConfig {
     pub log_name: Option<String>,
     // 日志风格
     pub style: LogStyle,
+    // 清理同步
+    pub cleanup_sync: Option<bool>,
 }
 
 fn default_usize() -> u64 {
@@ -66,6 +68,7 @@ impl Default for LogConfig {
             filters: None,
             log_name: None,
             style: LogStyle::Default,
+            cleanup_sync: Some(false),
         }
     }
 }
@@ -183,6 +186,12 @@ pub fn setup(cfg: LogConfig) -> Result<()> {
     };
     let filespec = FileSpec::default().directory(cfg.dir).basename(basename);
 
+    let cleanup_sync = if let Some(v) = cfg.cleanup_sync {
+        v
+    } else {
+        false
+    };
+
     let mut hand = hand
         .rotate(
             Criterion::AgeOrSize(Age::Day, cfg.size_mb * 1024 * 1024),
@@ -192,7 +201,7 @@ pub fn setup(cfg: LogConfig) -> Result<()> {
             },
             Cleanup::KeepForDays(cfg.keep_day),
         )
-        .cleanup_in_background_thread(true)
+        .cleanup_in_background_thread(cleanup_sync)
         .log_to_file(filespec);
 
     if cfg.console {

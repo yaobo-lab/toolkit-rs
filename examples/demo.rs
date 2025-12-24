@@ -9,12 +9,24 @@ fn main() {
     set_panic_handler(PaincConf::default());
     let mut cfg = LogConfig::default();
     cfg.style = LogStyle::Module;
-    logger::setup(LogConfig::default()).unwrap_or_else(|e| {
+    cfg.size_mb = 1;
+    cfg.keep_day = 2;
+    logger::setup(cfg).unwrap_or_else(|e| {
         println!("log setup err:{}", e);
         process::exit(1);
     });
-    log::debug!("this is a debug log..");
-    log::info!("this is a info log..");
-    log::warn!("this is a warn log..");
-    log::error!("this is a error log..");
+
+    for _ in 0..100 {
+        log::debug!("this is a debug log..");
+        log::info!("this is a info log..");
+        log::warn!("this is a warn log..");
+        log::error!("this is a error log..");
+    }
+
+    // for _ in 0..10000 {
+    //     log::debug!("this is a debug log..");
+    //     log::info!("this is a info log..");
+    //     log::warn!("this is a warn log..");
+    //     log::error!("this is a error log..");
+    // }
 }

@@ -186,12 +186,6 @@ pub fn setup(cfg: LogConfig) -> Result<()> {
     };
     let filespec = FileSpec::default().directory(cfg.dir).basename(basename);
 
-    let cleanup_sync = if let Some(v) = cfg.cleanup_sync {
-        v
-    } else {
-        false
-    };
-
     let mut hand = hand
         .rotate(
             Criterion::AgeOrSize(Age::Day, cfg.size_mb * 1024 * 1024),
@@ -201,7 +195,7 @@ pub fn setup(cfg: LogConfig) -> Result<()> {
             },
             Cleanup::KeepForDays(cfg.keep_day),
         )
-        .cleanup_in_background_thread(cleanup_sync)
+        .cleanup_in_background_thread(cfg.cleanup_sync.unwrap_or(false))
         .log_to_file(filespec);
 
     if cfg.console {
@@ -216,5 +210,6 @@ pub fn setup(cfg: LogConfig) -> Result<()> {
         hand = hand.duplicate_to_stdout(d)
     }
     hand.start()?;
+
     Ok(())
 }

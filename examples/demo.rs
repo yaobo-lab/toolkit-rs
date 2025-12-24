@@ -10,7 +10,7 @@ fn main() {
     let mut cfg = LogConfig::default();
     cfg.style = LogStyle::Module;
     cfg.size_mb = 1;
-    cfg.keep_day = 2;
+    cfg.keep_day = 1;
     logger::setup(cfg).unwrap_or_else(|e| {
         println!("log setup err:{}", e);
         process::exit(1);

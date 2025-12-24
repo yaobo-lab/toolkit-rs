@@ -191,7 +191,7 @@ pub fn setup(cfg: LogConfig) -> Result<()> {
             Criterion::AgeOrSize(Age::Day, cfg.size_mb * 1024 * 1024),
             Naming::TimestampsCustomFormat {
                 current_infix: None,
-                format: "%Y.%m.%d",
+                format: "r%Y-%m-%d_%H-%M-%S",
             },
             Cleanup::KeepForDays(cfg.keep_day),
         )

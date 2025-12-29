@@ -1,6 +1,6 @@
 use std::process;
-use std::thread;
-use std::time::Duration;
+// use std::thread;
+// use std::time::Duration;
 use toolkit_rs::{
     logger::{self, LogConfig, LogStyle},
     painc::{set_panic_handler, PaincConf},
@@ -11,14 +11,14 @@ fn main() {
     let mut cfg = LogConfig::default();
     cfg.style = LogStyle::Module;
     cfg.size_mb = 1;
-    cfg.keep_day = 2;
+    cfg.keep_file_count = Some(2);
     cfg.cleanup_sync = Some(false);
     logger::setup(cfg).unwrap_or_else(|e| {
         println!("log setup err:{}", e);
         process::exit(1);
     });
 
-    for i in 0..5024 {
+    for i in 0..100 {
         log::debug!("this is a debug log..{}", i);
         log::info!("this is a info log..{}", i);
         log::warn!("this is a warn log..{}", i);

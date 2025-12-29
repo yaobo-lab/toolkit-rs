@@ -28,9 +28,12 @@ pub struct LogConfig {
     // 日志输出目录
     #[serde(default = "default_log_dir")]
     pub dir: String,
+
     // 日志保留文件数
-    #[serde(default = "default_keep_day")]
-    pub keep_day: usize,
+    pub keep_day: Option<usize>,
+    // 保留文件数
+    pub keep_file_count: Option<usize>,
+
     // 过滤日志模块
     pub filters: Option<Vec<String>>,
     // 日志文件名
@@ -47,9 +50,7 @@ fn default_usize() -> u64 {
 fn default_console() -> bool {
     true
 }
-fn default_keep_day() -> usize {
-    3
-}
+
 fn default_level() -> u8 {
     4
 }
@@ -64,7 +65,8 @@ impl Default for LogConfig {
             size_mb: default_usize(),
             console: default_console(),
             dir: default_log_dir(),
-            keep_day: default_keep_day(),
+            keep_day: None,
+            keep_file_count: Some(3),
             filters: None,
             log_name: None,
             style: LogStyle::Default,
@@ -186,15 +188,20 @@ pub fn setup(cfg: LogConfig) -> Result<()> {
     };
     let filespec = FileSpec::default().directory(cfg.dir).basename(basename);
 
+    let mut crit = Criterion::Size(cfg.size_mb * 1024 * 1024);
+    let mut cleanup = Cleanup::KeepLogFiles(cfg.keep_file_count.unwrap_or(3));
+    let mut naming = Naming::Numbers;
+    if let Some(v) = cfg.keep_day {
+        crit = Criterion::AgeOrSize(Age::Day, cfg.size_mb * 1024 * 1024);
+        cleanup = Cleanup::KeepForDays(v);
+        naming = Naming::TimestampsCustomFormat {
+            current_infix: Some("rCURRENT"),
+            format: "r%Y-%m-%d_%H-%M-%S",
+        };
+    }
+
     let mut hand = hand
-        .rotate(
-            Criterion::AgeOrSize(Age::Day, cfg.size_mb * 1024 * 1024),
-            Naming::TimestampsCustomFormat {
-                current_infix: None,
-                format: "r%Y-%m-%d_%H-%M-%S",
-            },
-            Cleanup::KeepForDays(cfg.keep_day),
-        )
+        .rotate(crit, naming, cleanup)
         .cleanup_in_background_thread(cfg.cleanup_sync.unwrap_or(false))
         .log_to_file(filespec);
 

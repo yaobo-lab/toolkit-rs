@@ -12,11 +12,13 @@ pub use time::*;
 
 pub type AppResult<T = ()> = std::result::Result<T, anyhow::Error>;
 
+#[cfg(feature = "logger")]
 use std::time::Duration;
 #[cfg(target_os = "linux")]
 use tokio::process::Command;
 
 // 程序退出
+#[cfg(feature = "logger")]
 pub fn after_app_exist(sec: u8) {
     tokio::spawn(async move {
         log::info!("程序退出，{} 秒后重启", sec);
@@ -26,6 +28,7 @@ pub fn after_app_exist(sec: u8) {
 }
 
 //重启系统
+#[cfg(feature = "logger")]
 pub fn after_reboot(sec: u8) {
     #[cfg(target_os = "linux")]
     {

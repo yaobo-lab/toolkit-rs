@@ -1,6 +1,6 @@
 [package]
 name = "toolkit-rs"
-version = "1.0.23"
+version = "1.0.24"
 edition = "2021"
 description = "Rust toolkit library(logger, time, painc handle)"
 license = "MIT"   
@@ -9,15 +9,15 @@ repository = "https://github.com/yaobo-lab/toolkit-rs"
 
 [dependencies]
 serde = { version = "1.0.228", features = ["derive"] }
-anyhow = "1.0.100"
-chrono = { version = "0.4.43" }
+anyhow = "1.0.102"
+chrono = { version = "0.4.44" }
 
 log = { version = "0.4.28", default-features = false, features = [
     "std",
 ], optional = true } 
-flexi_logger =  { version ="0.31.7",optional = true}
+flexi_logger =  { version ="0.31.8",optional = true}
 
-tokio = { version = "1.49.0", default-features = false, features = [
+tokio = { version = "1.50.0", default-features = false, features = [
     "macros",
     "rt",
     "process",
@@ -25,7 +25,7 @@ tokio = { version = "1.49.0", default-features = false, features = [
 ] }
 
 [features]
-default = []
+default = ["logger","panic_handle"]
 
 panic_handle = []
 logger = ["dep:flexi_logger", "dep:log"]

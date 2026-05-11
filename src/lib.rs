@@ -4,6 +4,9 @@ pub mod logger;
 #[cfg(feature = "panic_handle")]
 pub mod painc;
 
+#[cfg(feature = "config")]
+pub mod config;
+
 pub mod time;
 pub use anyhow;
 pub use chrono;

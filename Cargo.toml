@@ -1,6 +1,6 @@
 [package]
 name = "toolkit-rs"
-version = "1.0.24"
+version = "1.0.25"
 edition = "2021"
 description = "Rust toolkit library(logger, time, painc handle)"
 license = "MIT"   
@@ -24,9 +24,14 @@ tokio = { version = "1.50.0", default-features = false, features = [
     "time",
 ] }
 
-[features]
-default = ["logger","panic_handle"]
 
+# config
+config={version = '0.15',default-features = false,features = ['toml'],optional = true}
+
+
+[features]
+default = ["logger","panic_handle","config"]
+config = ["dep:config"]
 panic_handle = []
 logger = ["dep:flexi_logger", "dep:log"]
 

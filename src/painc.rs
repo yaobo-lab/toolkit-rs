@@ -1,6 +1,5 @@
 use std::backtrace;
 use std::io::Write;
-use std::sync::OnceLock;
 use std::{fs::OpenOptions, str::FromStr};
 thread_local! {
     static PANIC_COUNT : std::cell::RefCell<u32> = std::cell::RefCell::new(0);
@@ -24,14 +23,7 @@ impl Default for PaincConf {
     }
 }
 
-static VERSION_INFO: OnceLock<PaincConf> = OnceLock::new();
-pub fn get_version() -> &'static PaincConf {
-    VERSION_INFO.get().expect("version info get error")
-}
-
 pub fn set_panic_handler(v: PaincConf) {
-    VERSION_INFO.set(v).expect("version info set error");
-
     std::panic::set_hook(Box::new(move |info| {
         PANIC_COUNT.with(|c| {
             let mut count = c.borrow_mut();
@@ -91,9 +83,8 @@ pub fn set_panic_handler(v: PaincConf) {
             "panic occurred:-----------------------------start-----------------------------"
         ));
 
-        let info = get_version();
-        write_err(format!("app version: {}", info.version));
-        write_err(format!("app build date: {}", info.build_time));
+        write_err(format!("app version: {}", v.version));
+        write_err(format!("app build date: {}", v.build_time));
 
         write_err(format!("os version: {}", std::env::consts::OS));
         write_err(format!("arch: {}", std::env::consts::ARCH));
@@ -115,7 +106,7 @@ pub fn set_panic_handler(v: PaincConf) {
         write_err(format!(
             "panic occurred:-----------------------------end-----------------------------\n\n"
         ));
-        if info.painc_exit {
+        if v.painc_exit {
             std::process::exit(1);
         }
     }));

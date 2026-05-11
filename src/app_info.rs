@@ -1,5 +1,7 @@
+use super::DATETIME_FORMAT;
 use chrono::{DateTime, TimeDelta, Utc};
 use std::sync::OnceLock;
+
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum OsPlatform {
     Linux,
@@ -69,24 +71,16 @@ impl AppInfo {
     }
 
     pub fn print_app_info(&self) -> String {
-        let build_timestamp = (self.build_timestamp)()
-            .format("%Y-%m-%d %H:%M:%S UTC")
-            .to_string();
-        let git_commit_short_id =
-            (self.git_commit_short_id)().unwrap_or_else(|| "unknown".to_string());
+        let build_timestamp = (self.build_timestamp)().format(DATETIME_FORMAT).to_string();
+
         let git_commit_id = (self.git_commit_id)().unwrap_or_else(|| "unknown".to_string());
-        let git_commit_timestamp = (self.git_commit_timestamp)()
-            .map(|timestamp| timestamp.format("%Y-%m-%d %H:%M:%S UTC").to_string())
-            .unwrap_or_else(|| "unknown".to_string());
 
         let rows = [
             ("Version", self.version.as_str()),
             ("Platform", self.os_platform.as_str()),
             ("OS Version", self.os_version.as_str()),
             ("Build Time", build_timestamp.as_str()),
-            ("Git Commit", git_commit_short_id.as_str()),
-            ("Git Commit Full", git_commit_id.as_str()),
-            ("Git Commit Time", git_commit_timestamp.as_str()),
+            ("Git Commit id", git_commit_id.as_str()),
         ];
 
         let label_width = 15;

@@ -7,6 +7,8 @@ pub mod painc;
 #[cfg(feature = "config")]
 pub mod config;
 
+pub mod app_info;
+
 pub mod time;
 pub use anyhow;
 pub use chrono;

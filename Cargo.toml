@@ -24,14 +24,18 @@ tokio = { version = "1.50.0", default-features = false, features = [
     "time",
 ] }
 
-
 # config
 config={version = '0.15',default-features = false,features = ['toml'],optional = true}
 
 
+# info
+os_info = { version = "3", default-features = false,optional = true }
+
+
 [features]
-default = ["logger","panic_handle","config"]
+default = ["logger","panic_handle","config","app_info"]
 config = ["dep:config"]
+app_info = ["dep:os_info"] 
 panic_handle = []
 logger = ["dep:flexi_logger", "dep:log"]
 

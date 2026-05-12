@@ -58,6 +58,20 @@ fn default_log_dir() -> String {
     "./logs".to_string()
 }
 
+impl LogConfig {
+    pub fn to_level(&self) -> LevelFilter {
+        let level = match self.level {
+            1 => LevelFilter::Error,
+            2 => LevelFilter::Warn,
+            3 => LevelFilter::Info,
+            4 => LevelFilter::Debug,
+            5 => LevelFilter::Trace,
+            _ => LevelFilter::Debug,
+        };
+        level
+    }
+}
+
 impl Default for LogConfig {
     fn default() -> Self {
         Self {
@@ -154,6 +168,8 @@ pub fn _full(
     )?;
     write!(w, "{}", &record.args())
 }
+
+// 初始化日志
 pub fn setup(cfg: LogConfig) -> Result<()> {
     let level = match cfg.level {
         1 => LevelFilter::Error,

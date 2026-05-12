@@ -3,6 +3,11 @@ use anyhow::anyhow;
 use config::{Config, File, Source};
 use std::path::Path;
 
+pub fn read_config<'de, T: serde::Deserialize<'de>>(cfg_file: &str) -> AppResult<T> {
+    let (cfg, _) = read_config_with_required(cfg_file, true, &[])?;
+    Ok(cfg)
+}
+
 pub fn read_config_default<'de, T: serde::Deserialize<'de>>(cfg_file: &str) -> AppResult<T> {
     let (cfg, def) = read_config_with_required(cfg_file, false, &[])?;
     if def {

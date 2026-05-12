@@ -39,19 +39,19 @@ pub struct AppInfo {
     pub version: String,
     pub os_platform: OsPlatform,
     pub os_version: String,
-    pub build_timestamp: fn() -> DateTime<Utc>,
-    pub git_commit_id: fn() -> Option<String>,
-    pub git_commit_short_id: fn() -> Option<String>,
-    pub git_commit_timestamp: fn() -> Option<DateTime<Utc>>,
+    pub build_timestamp: DateTime<Utc>,
+    pub git_commit_id: Option<String>,
+    pub git_commit_short_id: Option<String>,
+    pub git_commit_timestamp: Option<DateTime<Utc>>,
 }
 
 impl AppInfo {
     pub fn new(
         version: &str,
-        build_timestamp: fn() -> DateTime<Utc>,
-        git_commit_id: fn() -> Option<String>,
-        git_commit_short_id: fn() -> Option<String>,
-        git_commit_timestamp: fn() -> Option<DateTime<Utc>>,
+        build_timestamp: DateTime<Utc>,
+        git_commit_id: Option<String>,
+        git_commit_short_id: Option<String>,
+        git_commit_timestamp: Option<DateTime<Utc>>,
     ) -> Self {
         let os_info = os_info::get();
         let os_version = Some(os_info.version().to_string())
@@ -71,16 +71,18 @@ impl AppInfo {
     }
 
     pub fn print_app_info(&self) -> String {
-        let build_timestamp = (self.build_timestamp)().format(DATETIME_FORMAT).to_string();
-
-        let git_commit_id = (self.git_commit_id)().unwrap_or_else(|| "unknown".to_string());
+        let build_timestamp = self.build_timestamp.format(DATETIME_FORMAT).to_string();
+        let git_commit_id = self
+            .git_commit_id
+            .clone()
+            .unwrap_or_else(|| "unknown".to_string());
 
         let rows = [
             ("Version", self.version.as_str()),
             ("Platform", self.os_platform.as_str()),
             ("OS Version", self.os_version.as_str()),
-            ("Build Time", build_timestamp.as_str()),
-            ("Git Commit id", git_commit_id.as_str()),
+            ("Build Time", &build_timestamp.as_str()),
+            ("Git Commit id", &git_commit_id.as_str()),
         ];
 
         let label_width = 15;
